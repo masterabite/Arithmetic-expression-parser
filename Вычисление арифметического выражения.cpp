@@ -1,7 +1,9 @@
+#define _CRT_SECURE_NO_WARNINGS
 #include <iostream>
 #include <string>
 #include <locale>
-#include <fstream>
+#include <math.h>
+#include <cstdio>
 
 using namespace std;
 
@@ -10,18 +12,17 @@ int prior(char c) {
 
 	if (c == '+' || c == '-') {
 		return 1;
-	} 
+	}
 	if (c == '*' || c == '/') {
 		return 2;
 	}
 	if (c == '^') {
 		return 3;
 	}
-
 	return 0;
 }
 
-bool isFunction(string &str) {
+bool isFunction(string& str) {
 	//функция проверяет является ли выражение функцией от другого выражения
 
 	int balance = 0;
@@ -29,7 +30,7 @@ bool isFunction(string &str) {
 	for (int i = 0; i < int(str.size()); ++i) {
 		if (str[i] == '(') {
 			++balance;
-		} 
+		}
 		if (str[i] == ')') {
 			--balance;
 			if (balance == 0 && i < int(str.size()) - 1) {
@@ -52,17 +53,17 @@ double parseToDouble(string str) {
 			point = i;
 		}
 	}
-	
-	double k = pow(10.0, point - 1); /*10 в степени максимального разряда 
+
+	double k = pow(10.0, point - 1); /*10 в степени максимального разряда
 									 (по сути это кол-во символов до разделителя)*/
-	
+
 
 	for (int i = 0; i < int(str.size()); ++i) {
 		if (isdigit(str[i])) {
 			res += k * int(char(str[i]) - '0');/*прибавляем соответствующий разряд*/
 			k /= 10;/*уменьшаем разряд*/
 		}
-		else if (str[i] != '.') {/*если встретили сторонний символ значит 
+		else if (str[i] != '.') {/*если встретили сторонний символ значит
 								 выражение не корректно*/
 			cout << "Не удалось распознать выражение: " << str << '\n';
 			return res;
@@ -74,20 +75,21 @@ double parseToDouble(string str) {
 }
 
 double calc(string str, string& signs, double& x) {
-	/*функция вычисляет выражение str, используя 
+	/*функция вычисляет выражение str, используя
 	операции signs и подставляя вместо x значение &x*/
-	
+
+	/*убираем все лишние пробелы*/
+	for (int i = 0; i < int(str.size()); ++i) {
+		if (str[i] == ' ') {
+			str.erase(str.begin() + i);
+			--i;
+		}
+	}
+
 	/*убираем все крайние скобки*/
 	while (str[0] == '(' && str[int(str.size()) - 1] == ')') {
 		str.erase(str.begin());
-		str.erase(str.end()-1);
-	}
-	
-	/*убираем все лишние пробелы*/
-	for (int i = 0; i < int(str.size()); ++i) {
-		while (i < int(str.size()) && str[i] == ' ') {
-			str.erase(str.begin() + i);
-		}
+		str.erase(str.end() - 1);
 	}
 
 	/*если получили пустое выражение возвращаем 0*/
@@ -107,15 +109,15 @@ double calc(string str, string& signs, double& x) {
 	int p = 0, mn = 3, mnind = -1, cur = 0;
 
 	for (; cur < int(str.size()); ++cur) {
-		
+
 		/*если заходим в скобку повышаем приоритет*/
 		if (str[cur] == '(') {
-			p += 4;
+			p += 100;
 		}
 
 		/*соответственно отнимаем приоритет*/
 		if (str[cur] == ')') {
-			p -= 4;
+			p -= 100;
 		}
 
 		/*ищем операцию, которую будем выполняь в последнюю очередь
@@ -134,50 +136,47 @@ double calc(string str, string& signs, double& x) {
 	for (int i = 0; i < mnind; ++i) {
 		left += str[i];
 	}
-	for (int i = mnind+1; i < int(str.size()); ++i) {
+	
+	for (int i = mnind + 1; i < int(str.size()); ++i) {
 		right += str[i];
 	}
 
-	/*комментарий для отладки, можно убрать*/
-	//cout << str << "= " << left << "?" << right << '\n';
+	/*случаи, когда наше выражение представляет из себя функции (sin, cos, tg, ...)*/
+	if (isFunction(str)) {
+		string unFunc = str.substr(str.find("(") + 1, int(str.size()) - int(str.find("(")) - 2);
+		double unFuncCalc = calc(unFunc, signs, x);
 
-	/*случаи, когда наше выражение представляет из себя функции (sin, cos, tg ...)*/
-	if (str.find("sin(") == 0 && isFunction(str)) {
-		string unSin = "";
-		for (int i = 4; i < int(str.size()) - 1; ++i) {
-			unSin += str[i];
+		if (str.find("sin(") == 0) {
+			return sin(unFuncCalc);
 		}
-		return sin(calc(unSin, signs, x));
-	}
-	if (str.find("cos(") == 0 && isFunction(str)) {
-		string unSin = "";
-		for (int i = 4; i < int(str.size()) - 1; ++i) {
-			unSin += str[i];
+		if (str.find("arcsin(") == 0) {
+			return asin(unFuncCalc);
 		}
-		return cos(calc(unSin, signs, x));
-	}
-	if (str.find("tg(") == 0 && isFunction(str)) {
-		string unSin = "";
-		for (int i = 3; i < int(str.size()) - 1; ++i) {
-			unSin += str[i];
+		if (str.find("cos(") == 0) {
+			return cos(unFuncCalc);
 		}
-		return tan(calc(unSin, signs, x));
-	}
-	if (str.find("ctg(") == 0 && isFunction(str)) {
-		string unSin = "";
-		for (int i = 4; i < int(str.size()) - 1; ++i) {
-			unSin += str[i];
+		if (str.find("arccos(") == 0) {
+			return acos(unFuncCalc);
 		}
-		return 1.0/tan(calc(unSin, signs, x));
-	}
-	if (str.find("abs(") == 0 && isFunction(str)) {
-		string unSin = "";
-		for (int i = 4; i < int(str.size()) - 1; ++i) {
-			unSin += str[i];
+		if (str.find("tg(") == 0) {
+			return tan(unFuncCalc);
 		}
-		return abs(calc(unSin, signs, x));
+		if (str.find("arctg(") == 0) {
+			return atan(unFuncCalc);
+		}
+		if (str.find("ctg(") == 0) {
+			return 1.0 / tan(unFuncCalc);
+		}
+		if (str.find("arcctg(") == 0) {
+			return atan(1.0 / unFuncCalc);
+		}
+		if (str.find("abs(") == 0) {
+			return abs(unFuncCalc);
+		}
+		if (str.find("sign(") == 0) {
+			return unFuncCalc/abs(unFuncCalc);
+		}
 	}
-
 
 	/*если у нас нет операций в выражении и это не вышеописанные функции, то возвращаем
 	вещественное число от этого выражения*/
@@ -205,9 +204,10 @@ double calc(string str, string& signs, double& x) {
 			return calcL / calcR;
 		}
 		else if (str[mnind] == '^') {
-			return pow(calcL,calcR);
+			return pow(calcL, calcR);
 		}
 	}
+	return 0;
 }
 
 int main()
@@ -215,26 +215,25 @@ int main()
 	setlocale(LC_ALL, "Russian");
 
 	string signs = "+-/*^";/*строка содержащая операции которые нам доступны*/
-	string head = "x	f(x)\n";
 	string f;/*строка самого выражения*/
 	string fileName;
 	double a, b, h;/*соответствующие переменные*/
-	
+
 	cout << "Введите выражение: "; getline(cin, f);
-	
+
 	cout << "Введите a: "; cin >> a;
 	cout << "Введите b: "; cin >> b;
 	cout << "Введите h: "; cin >> h;
 	cout << "Введите имя файла: "; cin >> fileName;
 
-	ofstream fout(fileName);
+	FILE* fout = fopen(fileName.c_str(), "w");
 
-	fout << head;
-	cout << head;
+	printf("|%12s|%12s|\n", "x", "f(x)");
+	fprintf(fout, "|%12s|%12s|\n", "x", "f(x)");
 	for (double x = a; x <= b; x += h) {
-		cout << x << "	" << calc(f, signs, x) << '\n';
-		fout << x << "	" << calc(f, signs, x) << '\n';
+		printf("|%12lf|%12lf|\n", x, calc(f, signs, x));
+		fprintf(fout, "|%12lf|%12lf|\n", x, calc(f, signs, x));
 	}
-	fout.close();
-	
+	fclose(fout);
+
 }
